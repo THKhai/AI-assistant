@@ -98,3 +98,11 @@ Get-Content data/logs/app.log -Wait -Tail 50
 ```
 
 Log levels: INFO to console + file, DEBUG to file only.
+
+## Docs
+
+All diagrams and reference docs live in `claude/`:
+
+| File | Contents |
+|---|---|
+| `claude/flowchart.md` | Full system flowchart (Mermaid) |
