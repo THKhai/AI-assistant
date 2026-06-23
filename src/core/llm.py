@@ -1,0 +1,17 @@
+from llama_index.llms.openai_like import OpenAILike
+from src.core import config
+
+_llm = None
+
+
+def get_llm() -> OpenAILike:
+    global _llm
+    if _llm is None:
+        _llm = OpenAILike(
+            model=config.DEEPSEEK_MODEL,
+            api_base=config.DEEPSEEK_BASE_URL,
+            api_key=config.DEEPSEEK_API_KEY,
+            is_chat_model=True,
+            context_window=65536,
+        )
+    return _llm

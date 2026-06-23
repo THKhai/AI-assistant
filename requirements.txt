@@ -1,0 +1,13 @@
+llama-index-core
+llama-index-llms-openai
+llama-index-llms-openai-like
+llama-index-embeddings-huggingface
+llama-index-vector-stores-chroma
+llama-index-vector-stores-qdrant
+chromadb
+qdrant-client
+sentence-transformers
+python-telegram-bot
+fastapi
+uvicorn
+python-dotenv
