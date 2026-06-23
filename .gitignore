@@ -2,6 +2,7 @@
 data/chroma_db/
 data/sqlite/
 data/raw/
+data/logs/
 __pycache__/
 *.pyc
 *.pyo

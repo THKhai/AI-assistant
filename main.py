@@ -1,13 +1,13 @@
 import sys
-import logging
+from src.core.logger import get_logger
 from src.core.db import init_db
 
-log = logging.getLogger(__name__)
+log = get_logger("main")
 
 
 def run_bot():
     from src.bot.handler import build_app
-    log.info("Starting Telegram bot (polling mode)...")
+    log.info("starting Telegram bot (polling mode)")
     app = build_app()
     app.run_polling(drop_pending_updates=True)
 
@@ -31,7 +31,6 @@ def run_ask(question: str):
 
 
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
     init_db()
 
     cmd = sys.argv[1] if len(sys.argv) > 1 else "bot"

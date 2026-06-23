@@ -3,6 +3,9 @@ from datetime import date, timedelta
 
 from src.core import db
 from src.core.llm import get_llm
+from src.core.logger import get_logger
+
+log = get_logger("planner")
 
 
 def _this_month() -> str:
@@ -26,8 +29,8 @@ Always check in on previous commitments before asking about new plans."""
 
 
 def _call_llm(messages: list[dict]) -> str:
-    llm = get_llm()
     from llama_index.core.llms import ChatMessage, MessageRole
+    llm = get_llm()
     chat_messages = [
         ChatMessage(role=MessageRole.SYSTEM, content=SYSTEM_PROMPT)
     ] + [
@@ -37,7 +40,9 @@ def _call_llm(messages: list[dict]) -> str:
         )
         for m in messages
     ]
+    log.info(f"DeepSeek call — turns={len(messages)}")
     response = llm.chat(chat_messages)
+    log.debug(f"DeepSeek response length={len(response.message.content)} chars")
     return response.message.content
 
 
@@ -54,6 +59,7 @@ class PlannerSession:
         db.save_turn(self.session_id, "planner", self.session_type, self.turn, role, content)
 
     def start(self) -> str:
+        log.info(f"session started — type={self.session_type} id={self.session_id}")
         if self.session_type == "monthly":
             msg = self._start_monthly()
         elif self.session_type == "weekly":
