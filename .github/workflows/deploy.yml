@@ -25,19 +25,26 @@ jobs:
           fi
 
       - name: Rebuild and restart containers
-        run: docker compose up -d --build --remove-orphans
+        run: |
+          PROFILES=""
+          if grep -qE '^CLOUDFLARE_TUNNEL_TOKEN=.+' .env 2>/dev/null; then
+            PROFILES="--profile tunnel"
+          fi
+          docker compose $PROFILES up -d --build --remove-orphans
 
       - name: Health check
         run: |
-          echo "Waiting for service to be healthy..."
-          for i in $(seq 1 12); do
-            if curl -sf http://localhost:8000/health; then
-              echo ""
-              echo "Healthy after $((i * 5))s"
+          echo "Waiting for ai-web to become healthy..."
+          for i in $(seq 1 24); do
+            health=$(docker inspect --format='{{.State.Health.Status}}' \
+              "$(docker compose ps -q ai-web)" 2>/dev/null || echo "unknown")
+            echo "[${i}] status: $health"
+            if [ "$health" = "healthy" ]; then
+              echo "Service is healthy"
               exit 0
             fi
             sleep 5
           done
-          echo "Health check failed after 60s — last 50 log lines:"
+          echo "Health check failed after 120s — last 50 log lines:"
           docker compose logs --tail=50
           exit 1

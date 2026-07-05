@@ -44,18 +44,19 @@ services:
         condition: service_healthy
 
   # ── Cloudflare Tunnel ─────────────────────────────────────
-  # Token from: Cloudflare Zero Trust → Networks → Tunnels → your tunnel → token
+  # Token from: Cloudflare Zero Trust → Networks → Tunnels → your tunnel → Overview tab
+  # Add CLOUDFLARE_TUNNEL_TOKEN=<token> to .env to activate this service.
   cloudflared:
     image: cloudflare/cloudflared:latest
     restart: unless-stopped
-    command: tunnel --no-autoupdate run
-    environment:
-      - TUNNEL_TOKEN=${CLOUDFLARE_TUNNEL_TOKEN}
+    command: tunnel --no-autoupdate run --token ${CLOUDFLARE_TUNNEL_TOKEN:-}
     networks:
       - internal
     depends_on:
       ai-web:
         condition: service_healthy
+    profiles:
+      - tunnel
 
 networks:
   internal:
