@@ -10,3 +10,11 @@ __pycache__/
 venv/
 *.egg-info/
 .pytest_cache/
+.idea
+claude/
+certs/
+cloudflared/credentials/
+RULES.md
+PROJECT.md
+CLAUDE.md
+.gitignore

@@ -5,7 +5,7 @@ from pathlib import Path
 from llama_index.core import VectorStoreIndex, StorageContext, Document
 from llama_index.core.node_parser import SentenceSplitter
 
-from src.core import config, db
+from src.core import config, services
 from src.core.embedder import get_embedder
 from src.core.logger import get_logger
 from src.core.vector_store import get_vector_store
@@ -19,7 +19,7 @@ def _doc_id(filepath: str) -> str:
 
 def ingest_file(filepath: str, module: str = "general") -> bool:
     doc_id = _doc_id(filepath)
-    if db.is_doc_indexed(doc_id):
+    if services.knowledge.is_indexed(doc_id):
         log.debug(f"skipped {Path(filepath).name} (already indexed)")
         return False
 
@@ -51,7 +51,7 @@ def ingest_file(filepath: str, module: str = "general") -> bool:
     storage_context = StorageContext.from_defaults(vector_store=vector_store)
     VectorStoreIndex(nodes, storage_context=storage_context, embed_model=get_embedder())
 
-    db.upsert_knowledge_doc(module, doc_id, filepath, title, tags)
+    services.knowledge.upsert(module, doc_id, filepath, title, tags)
     log.info(f"indexed {Path(filepath).name} — title='{title}' chunks={len(nodes)}")
     return True
 

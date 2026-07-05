@@ -1,4 +1,4 @@
-from src.core import db
+import uuid
 from src.core.query import ask, invalidate_index
 from src.core.ingest import ingest_directory
 from src.modules.planner import PlannerSession, get_week_status
@@ -8,7 +8,7 @@ _active_sessions: dict[int, PlannerSession] = {}
 
 
 def start_planner_session(user_id: int, session_type: str) -> str:
-    session_id = db.new_session_id()
+    session_id = str(uuid.uuid4())
     session = PlannerSession(session_type, session_id)
     _active_sessions[user_id] = session
     return session.start()

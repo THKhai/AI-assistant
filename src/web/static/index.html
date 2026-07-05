@@ -1,0 +1,777 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Assistant</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: #0f0f0f; color: #e0e0e0;
+  height: 100dvh; display: flex; overflow: hidden;
+}
+
+/* ── Sidebar ── */
+.sidebar {
+  width: 220px; background: #161616; border-right: 1px solid #242424;
+  display: flex; flex-direction: column; flex-shrink: 0;
+  transition: transform 0.22s ease;
+}
+.sidebar-top {
+  padding: 18px 16px 14px; border-bottom: 1px solid #242424;
+  display: flex; align-items: center; gap: 10px;
+}
+.sidebar-top .logo { font-size: 20px; }
+.sidebar-top .title { font-size: 15px; font-weight: 600; color: #fff; }
+
+.section { padding: 14px 8px 4px; }
+.section-label {
+  font-size: 10px; font-weight: 700; letter-spacing: 0.1em;
+  text-transform: uppercase; color: #555; padding: 0 8px 8px;
+}
+.nav-btn {
+  display: flex; align-items: center; gap: 9px; width: 100%;
+  background: none; border: none; color: #aaa; padding: 8px 10px;
+  border-radius: 7px; cursor: pointer; font-size: 13.5px; text-align: left;
+  margin-bottom: 1px; transition: background 0.12s, color 0.12s;
+}
+.nav-btn .icon { font-size: 15px; width: 20px; text-align: center; }
+.nav-btn:hover { background: #222; color: #e0e0e0; }
+.nav-btn.active { background: #1d2d44; color: #7eb8f7; font-weight: 500; }
+
+.sidebar-bottom {
+  margin-top: auto; padding: 10px 8px;
+  border-top: 1px solid #1e1e1e;
+}
+.user-badge {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 10px; border-radius: 7px; background: #1a1a1a; margin-bottom: 6px;
+}
+.user-badge .u-icon { font-size: 14px; }
+.user-badge .u-info { flex: 1; min-width: 0; }
+.user-badge .u-name { font-size: 13px; color: #ccc; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.user-badge .u-role { font-size: 11px; color: #555; }
+
+/* ── Main area ── */
+.chat-area {
+  flex: 1; display: flex; flex-direction: column; overflow: hidden;
+  background: #0f0f0f;
+}
+.chat-header {
+  padding: 14px 20px; border-bottom: 1px solid #1e1e1e;
+  font-size: 13px; color: #666; background: #111;
+  display: flex; align-items: center; gap: 10px;
+}
+.menu-toggle {
+  display: none; background: none; border: none; color: #666;
+  font-size: 18px; cursor: pointer; padding: 2px 6px; border-radius: 5px;
+}
+.menu-toggle:hover { background: #222; color: #ccc; }
+
+/* ── Chat view ── */
+.messages {
+  flex: 1; overflow-y: auto; padding: 20px 24px;
+  display: flex; flex-direction: column; gap: 10px;
+}
+.msg {
+  max-width: 78%; padding: 10px 14px; border-radius: 12px;
+  font-size: 14px; line-height: 1.65; white-space: pre-wrap; word-break: break-word;
+}
+.msg.assistant { background: #1a1a1a; color: #ddd; align-self: flex-start; border: 1px solid #262626; border-bottom-left-radius: 4px; }
+.msg.user { background: #1b3358; color: #ddeeff; align-self: flex-end; border-bottom-right-radius: 4px; }
+.msg.system { background: none; color: #444; align-self: center; font-size: 12px; font-style: italic; max-width: 90%; text-align: center; }
+.msg.error { background: #2a1010; color: #ff7070; align-self: flex-start; border: 1px solid #4a1f1f; font-size: 13px; }
+
+.typing-dots {
+  display: flex; gap: 5px; padding: 12px 16px; background: #1a1a1a;
+  border: 1px solid #262626; border-radius: 12px; border-bottom-left-radius: 4px;
+  align-self: flex-start; width: fit-content;
+}
+.typing-dots span { width: 7px; height: 7px; background: #444; border-radius: 50%; animation: blink 1.3s infinite; }
+.typing-dots span:nth-child(2) { animation-delay: 0.2s; }
+.typing-dots span:nth-child(3) { animation-delay: 0.4s; }
+@keyframes blink { 0%,60%,100% { opacity: 0.2; } 30% { opacity: 1; } }
+
+.input-bar {
+  padding: 14px 20px; border-top: 1px solid #1e1e1e;
+  display: flex; gap: 10px; background: #111; align-items: flex-end;
+}
+textarea {
+  flex: 1; background: #1a1a1a; border: 1px solid #2e2e2e; color: #e0e0e0;
+  border-radius: 10px; padding: 10px 14px; font-size: 14px; resize: none;
+  outline: none; font-family: inherit; line-height: 1.5;
+  min-height: 44px; max-height: 130px; overflow-y: auto; transition: border-color 0.15s;
+}
+textarea:focus { border-color: #3a6ea5; }
+textarea::placeholder { color: #444; }
+.send-btn {
+  background: #1b3358; color: #7eb8f7; border: 1px solid #234272; border-radius: 10px;
+  padding: 10px 18px; cursor: pointer; font-size: 14px; font-weight: 500;
+  height: 44px; white-space: nowrap; transition: background 0.12s;
+}
+.send-btn:hover { background: #234272; }
+.send-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* ── Flowchart view ── */
+#flowchart-view {
+  display: none; flex: 1; overflow: auto; padding: 28px 32px; background: #0f0f0f;
+}
+#flowchart-view h2 { font-size: 14px; color: #555; font-weight: 500; margin-bottom: 20px; letter-spacing: .05em; }
+#flowchart-view .mermaid { background: #141414; border: 1px solid #242424; border-radius: 12px; padding: 28px; overflow-x: auto; }
+#flowchart-view .mermaid svg { max-width: 100%; height: auto; }
+
+/* ── Panel views (account, admin) ── */
+.panel {
+  display: none; flex: 1; overflow-y: auto; padding: 28px 32px;
+  background: #0f0f0f;
+}
+.panel-header { margin-bottom: 24px; }
+.panel-header h2 { font-size: 16px; font-weight: 600; color: #fff; margin-bottom: 6px; }
+.panel-header p { font-size: 13px; color: #555; }
+.form-group { margin-bottom: 16px; max-width: 400px; }
+.form-group label {
+  display: block; font-size: 11px; font-weight: 700; letter-spacing: .08em;
+  text-transform: uppercase; color: #555; margin-bottom: 6px;
+}
+.form-group input {
+  width: 100%; background: #1a1a1a; border: 1px solid #2e2e2e; color: #e0e0e0;
+  border-radius: 8px; padding: 9px 12px; font-size: 14px; outline: none;
+  transition: border-color .15s; font-family: inherit;
+}
+.form-group input:focus { border-color: #3a6ea5; }
+.btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 9px 18px; border-radius: 8px; font-size: 13px; font-weight: 500;
+  cursor: pointer; border: 1px solid transparent; transition: background .12s; font-family: inherit;
+}
+.btn-primary { background: #1b3358; color: #7eb8f7; border-color: #234272; }
+.btn-primary:hover { background: #234272; }
+.btn-danger { background: #2d1515; color: #ff7070; border-color: #4a1f1f; }
+.btn-danger:hover { background: #3d1818; }
+.btn-success { background: #0e2d1a; color: #4caf82; border-color: #1a4a2e; }
+.btn-success:hover { background: #163d24; }
+.alert {
+  padding: 10px 14px; border-radius: 8px; font-size: 13px;
+  margin-bottom: 16px; display: none; max-width: 500px;
+}
+.alert.success { background: #0e2d1a; color: #4caf82; border: 1px solid #1a4a2e; }
+.alert.error   { background: #2a1010; color: #ff7070; border: 1px solid #4a1f1f; }
+/* tables */
+.data-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.data-table th {
+  text-align: left; font-size: 11px; font-weight: 700; letter-spacing: .08em;
+  text-transform: uppercase; color: #555; padding: 8px 12px; border-bottom: 1px solid #2a2a2a;
+}
+.data-table td { padding: 10px 12px; border-bottom: 1px solid #1e1e1e; color: #ccc; vertical-align: middle; }
+.data-table tr:hover td { background: #161616; }
+.badge {
+  display: inline-block; padding: 2px 8px; border-radius: 4px;
+  font-size: 11px; font-weight: 600; letter-spacing: .05em;
+}
+.badge-admin   { background: #1d2d44; color: #7eb8f7; }
+.badge-member  { background: #1e1e1e; color: #666; }
+.badge-active  { background: #0e2d1a; color: #4caf82; }
+.badge-deleted { background: #2a1010; color: #ff7070; }
+/* TOTP QR */
+#qr-container { background: #fff; display: inline-block; padding: 12px; border-radius: 8px; margin: 12px 0; }
+.secret-key { font-family: monospace; color: #7eb8f7; user-select: all; font-size: 13px; word-break: break-all; }
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #2a2a2a; border-radius: 3px; }
+
+/* ── Mobile overlay ── */
+.overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 98; }
+.overlay.show { display: block; }
+
+/* ── Responsive ── */
+@media (max-width: 600px) {
+  .sidebar { position: fixed; left: 0; top: 0; height: 100dvh; z-index: 99; transform: translateX(-100%); }
+  .sidebar.open { transform: translateX(0); }
+  .menu-toggle { display: block; }
+  .msg { max-width: 92%; }
+}
+</style>
+<script type="module">
+  import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+  mermaid.initialize({ startOnLoad: false, theme: 'dark', darkMode: true });
+  window._mermaid = mermaid;
+</script>
+<script src="https://cdn.jsdelivr.net/npm/qrcodejs/qrcode.min.js"></script>
+</head>
+<body>
+
+<div class="overlay" id="overlay" onclick="closeSidebar()"></div>
+
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-top">
+    <span class="logo">🤖</span>
+    <span class="title">AI Assistant</span>
+  </div>
+
+  <div class="section">
+    <div class="section-label">Planning</div>
+    <button class="nav-btn" id="btn-daily"   onclick="startSession('daily')">  <span class="icon">📅</span> Daily</button>
+    <button class="nav-btn" id="btn-evening" onclick="startSession('evening')"><span class="icon">🌙</span> Evening</button>
+    <button class="nav-btn" id="btn-weekly"  onclick="startSession('weekly')"> <span class="icon">📆</span> Weekly</button>
+    <button class="nav-btn" id="btn-monthly" onclick="startSession('monthly')"><span class="icon">🗓</span> Monthly</button>
+    <button class="nav-btn" id="btn-status"  onclick="showStatus()">           <span class="icon">📊</span> Status</button>
+  </div>
+
+  <div class="section">
+    <div class="section-label">Chat</div>
+    <button class="nav-btn active" id="btn-chat" onclick="switchMode('chat')"><span class="icon">💬</span> Free Chat</button>
+    <button class="nav-btn"        id="btn-ask"  onclick="switchMode('ask')"> <span class="icon">🔍</span> Ask Knowledge</button>
+  </div>
+
+  <div class="section">
+    <div class="section-label">Account</div>
+    <button class="nav-btn" id="btn-password" onclick="showChangePassword()"><span class="icon">🔑</span> Change Password</button>
+    <button class="nav-btn" id="btn-totp"     onclick="showTOTP()">          <span class="icon">🔐</span> Two-Factor Auth</button>
+  </div>
+
+  <div class="section" id="admin-section" style="display:none">
+    <div class="section-label">Admin</div>
+    <button class="nav-btn" id="btn-users" onclick="showUsers()"><span class="icon">👥</span> Users</button>
+  </div>
+
+  <div class="section">
+    <div class="section-label">System</div>
+    <button class="nav-btn" id="btn-gendb" onclick="runGenDB()">       <span class="icon">🗄</span> Run GenDB</button>
+    <button class="nav-btn" id="btn-flow"  onclick="showFlowChart()">  <span class="icon">🗺</span> System Flow</button>
+  </div>
+
+  <div class="sidebar-bottom">
+    <div class="user-badge">
+      <span class="u-icon">👤</span>
+      <div class="u-info">
+        <div class="u-name" id="sidebar-username">Loading…</div>
+        <div class="u-role" id="sidebar-role">—</div>
+      </div>
+    </div>
+    <form action="/logout" method="post" style="margin:0">
+      <button type="submit" class="nav-btn" style="color:#555;margin-bottom:0">
+        <span class="icon">🚪</span> Sign Out
+      </button>
+    </form>
+  </div>
+</aside>
+
+<div class="chat-area">
+  <div class="chat-header">
+    <button class="menu-toggle" onclick="openSidebar()">☰</button>
+    <span id="header-text">💬 Free Chat</span>
+  </div>
+
+  <!-- Chat view -->
+  <div class="messages" id="messages">
+    <div class="msg system">Welcome! Start a planning session from the sidebar, or chat freely below.</div>
+  </div>
+  <div class="input-bar" id="input-bar">
+    <textarea id="input" placeholder="Type a message…" rows="1"
+              onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
+    <button class="send-btn" id="send-btn" onclick="send()">Send</button>
+  </div>
+
+  <!-- Flowchart view -->
+  <div id="flowchart-view">
+    <h2>🗺 System Architecture</h2>
+    <div class="mermaid">
+flowchart TD
+    U(["📱 iPhone / Telegram"])
+    UB(["🖥 Browser"])
+
+    subgraph Entry ["main.py - parallel threads"]
+        direction LR
+        BOT["bot/handler.py\npolling - Thread 2"]
+        WEB["web/app.py\nFastAPI - Thread 1"]
+    end
+
+    subgraph Router ["Routing and Sessions"]
+        ROUTER["bot/router.py"]
+        WSESS["web sessions dict\nsession_id to PlannerSession"]
+    end
+
+    subgraph Core ["src/core/"]
+        LLM["llm.py\nDeepSeek API\nOpenAILike singleton"]
+        RAG["query.py\nRAG engine"]
+        INGEST["ingest.py\nJSON indexer"]
+        EMB["embedder.py\nbge-small-en-v1.5"]
+        MIGRATE["migrate.py\nmigration runner"]
+        AUTH["auth.py\nJWT + refresh + TOTP\nrate limiting"]
+    end
+
+    subgraph Modules ["src/modules/"]
+        PLANNER["planner.py\nPlannerSession\nmonthly, weekly, daily, evening"]
+    end
+
+    subgraph Storage ["Storage"]
+        CHROMA[("ChromaDB\nvector store")]
+        SQLITE[("SQLite\nplans, tasks, chats\nusers, tokens, audit")]
+        LOGS["data/logs/app.log"]
+        SQLFILES["data/migrations/\n*.sql"]
+    end
+
+    U -->|sends message| BOT
+    UB -->|HTTPS via cookie auth| WEB
+
+    BOT -->|/daily /weekly etc| ROUTER
+    ROUTER --> PLANNER
+    ROUTER -->|/ask| RAG
+
+    WEB -->|POST /api/start, /api/reply| WSESS
+    WSESS --> PLANNER
+    WEB -->|POST /api/chat| LLM
+    WEB -->|POST /api/ask| RAG
+    WEB -->|POST /api/gendb| MIGRATE
+    WEB --- AUTH
+
+    PLANNER -->|chat + history| LLM
+    LLM -->|answer| PLANNER
+    PLANNER --> SQLITE
+
+    RAG --> EMB
+    EMB --> CHROMA
+    CHROMA -->|top-k chunks| RAG
+    RAG --> LLM
+
+    SQLFILES --> MIGRATE
+    MIGRATE --> SQLITE
+    AUTH --> SQLITE
+
+    INGEST --> EMB
+    INGEST --> SQLITE
+
+    BOT -.-> LOGS
+    WEB -.-> LOGS
+    LLM -.-> LOGS
+    MIGRATE -.-> LOGS
+    </div>
+  </div>
+
+  <!-- Change Password panel -->
+  <div id="panel-password" class="panel">
+    <div class="panel-header">
+      <h2>🔑 Change Password</h2>
+      <p>Update your login password. All other sessions will be signed out.</p>
+    </div>
+    <div id="pw-alert" class="alert"></div>
+    <div class="form-group">
+      <label>Current Password</label>
+      <input type="password" id="pw-current" placeholder="Current password">
+    </div>
+    <div class="form-group">
+      <label>New Password</label>
+      <input type="password" id="pw-new" placeholder="Minimum 8 characters">
+    </div>
+    <div class="form-group">
+      <label>Confirm New Password</label>
+      <input type="password" id="pw-confirm" placeholder="Repeat new password"
+             onkeydown="if(event.key==='Enter') submitPasswordChange()">
+    </div>
+    <button class="btn btn-primary" onclick="submitPasswordChange()">Update Password</button>
+  </div>
+
+  <!-- TOTP panel -->
+  <div id="panel-totp" class="panel">
+    <div class="panel-header">
+      <h2>🔐 Two-Factor Authentication</h2>
+      <p>Protect your account with a time-based one-time password (Google Authenticator, Authy, etc.)</p>
+    </div>
+    <div id="totp-content"></div>
+  </div>
+
+  <!-- Admin: Users panel -->
+  <div id="panel-users" class="panel">
+    <div class="panel-header">
+      <h2>👥 User Management</h2>
+      <p>Manage accounts and roles.</p>
+    </div>
+    <div id="users-alert" class="alert"></div>
+    <div id="users-content">Loading…</div>
+  </div>
+
+</div>
+
+<script>
+// ── State ──
+let mode = 'chat';
+let plannerSessionId = null;
+const freeChatSessionId = randomUUID();
+let currentUser = { username: '', role: 'member', totp_enabled: false };
+
+// ── Fetch wrapper with auto token-refresh ──
+async function apiFetch(url, opts = {}, _retry = false) {
+  if (opts.json !== undefined) {
+    opts = {
+      ...opts,
+      method: opts.method || 'POST',
+      headers: { ...(opts.headers || {}), 'Content-Type': 'application/json' },
+      body: JSON.stringify(opts.json),
+    };
+    delete opts.json;
+  }
+  let res;
+  try { res = await fetch(url, opts); } catch { return null; }
+
+  if (res.status === 401 && !_retry) {
+    try {
+      const r = await fetch('/api/token/refresh', { method: 'POST' });
+      if (r.ok) return apiFetch(url, opts, true);
+    } catch {}
+    window.location.href = '/login';
+    return null;
+  }
+  return res;
+}
+async function apiPost(url, body) {
+  const res = await apiFetch(url, { method: 'POST', json: body });
+  if (!res) return null;
+  try { return await res.json(); } catch { return { ok: false, detail: 'Server error' }; }
+}
+async function apiGet(url) {
+  const res = await apiFetch(url, { method: 'GET' });
+  if (!res) return null;
+  try { return await res.json(); } catch { return null; }
+}
+
+// ── Sidebar ──
+function openSidebar()  { document.getElementById('sidebar').classList.add('open'); document.getElementById('overlay').classList.add('show'); }
+function closeSidebar() { document.getElementById('sidebar').classList.remove('open'); document.getElementById('overlay').classList.remove('show'); }
+
+function randomUUID() {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+    const r = Math.random()*16|0; return (c==='x'?r:(r&0x3|0x8)).toString(16);
+  });
+}
+
+function setActive(id) {
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  if (id) document.getElementById(id)?.classList.add('active');
+}
+function setHeader(text) { document.getElementById('header-text').textContent = text; }
+function clearMessages() { document.getElementById('messages').innerHTML = ''; }
+
+// ── View switching ──
+function showChatView() {
+  document.getElementById('messages').style.display = 'flex';
+  document.getElementById('input-bar').style.display = 'flex';
+  document.getElementById('flowchart-view').style.display = 'none';
+  document.querySelectorAll('.panel').forEach(p => p.style.display = 'none');
+}
+function showFlowView() {
+  document.getElementById('messages').style.display = 'none';
+  document.getElementById('input-bar').style.display = 'none';
+  document.getElementById('flowchart-view').style.display = 'block';
+  document.querySelectorAll('.panel').forEach(p => p.style.display = 'none');
+}
+function showPanel(id) {
+  document.getElementById('messages').style.display = 'none';
+  document.getElementById('input-bar').style.display = 'none';
+  document.getElementById('flowchart-view').style.display = 'none';
+  document.querySelectorAll('.panel').forEach(p => p.style.display = 'none');
+  document.getElementById(id).style.display = 'block';
+}
+
+// ── Alert helper ──
+function showAlert(id, msg, type) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  if (!msg) { el.style.display = 'none'; return; }
+  el.className = 'alert ' + (type || 'error');
+  el.textContent = msg;
+  el.style.display = 'block';
+}
+
+// ── Load current user ──
+async function loadCurrentUser() {
+  const data = await apiGet('/api/me');
+  if (!data) return;
+  currentUser = data;
+  document.getElementById('sidebar-username').textContent = data.username;
+  document.getElementById('sidebar-role').textContent = data.role;
+  if (data.role === 'admin') {
+    document.getElementById('admin-section').style.display = 'block';
+  }
+}
+
+// ── Planning ──
+async function startSession(type) {
+  const labels = { daily:'📅 Daily Planning', evening:'🌙 Evening Check-in', weekly:'📆 Weekly Planning', monthly:'🗓 Monthly Planning' };
+  mode = 'planner'; plannerSessionId = null;
+  showChatView(); clearMessages();
+  setHeader(labels[type] || type); setActive('btn-'+type); closeSidebar();
+  showTyping(); setBusy(true);
+  try {
+    const data = await apiPost('/api/start', { type });
+    plannerSessionId = data?.session_id;
+    hideTyping();
+    addMsg('assistant', data?.message || 'Could not start session.');
+  } catch { hideTyping(); addMsg('system', 'Could not start session.'); }
+  setBusy(false);
+  document.getElementById('input').focus();
+}
+
+async function showStatus() {
+  mode = 'status'; showChatView(); clearMessages();
+  setHeader('📊 Status'); setActive('btn-status'); closeSidebar();
+  showTyping(); setBusy(true);
+  try {
+    const data = await apiGet('/api/status');
+    hideTyping();
+    addMsg('assistant', data?.message || 'Error loading status.');
+  } catch { hideTyping(); addMsg('system', 'Error loading status.'); }
+  setBusy(false);
+}
+
+function switchMode(m) {
+  mode = m; plannerSessionId = null;
+  showChatView(); clearMessages(); closeSidebar();
+  if (m === 'chat') {
+    setHeader('💬 Free Chat'); setActive('btn-chat');
+    addMsg('system', 'Ask me anything.');
+  } else {
+    setHeader('🔍 Ask Knowledge Base'); setActive('btn-ask');
+    addMsg('system', "Ask a question and I'll search your knowledge files.");
+  }
+  document.getElementById('input').focus();
+}
+
+async function send() {
+  const input = document.getElementById('input');
+  const text = input.value.trim();
+  if (!text) return;
+  input.value = ''; autoResize(input);
+  addMsg('user', text); showTyping(); setBusy(true);
+  try {
+    let data;
+    if (mode === 'planner' && plannerSessionId)
+      data = await apiPost('/api/reply', { session_id: plannerSessionId, message: text });
+    else if (mode === 'ask')
+      data = await apiPost('/api/ask', { question: text });
+    else
+      data = await apiPost('/api/chat', { message: text, session_id: freeChatSessionId });
+    hideTyping();
+    addMsg('assistant', data?.message || 'No response.', data?.error);
+  } catch { hideTyping(); addMsg('assistant', 'Could not reach the server.', true); }
+  setBusy(false); input.focus();
+}
+
+// ── System ──
+async function runGenDB() {
+  showChatView(); clearMessages();
+  setHeader('🗄 GenDB — Run Migrations'); setActive('btn-gendb'); closeSidebar();
+  addMsg('system', 'Running pending migrations…'); setBusy(true);
+  try {
+    const data = await apiPost('/api/gendb', {});
+    addMsg('assistant', data?.message || 'Done.', data?.error);
+  } catch { addMsg('assistant', 'Could not reach the server.', true); }
+  setBusy(false);
+}
+
+let _flowRendered = false;
+async function showFlowChart() {
+  setHeader('🗺 System Flow'); setActive('btn-flow'); closeSidebar(); showFlowView();
+  if (!_flowRendered && window._mermaid) {
+    await window._mermaid.run({ querySelector: '#flowchart-view .mermaid' });
+    _flowRendered = true;
+  }
+}
+
+// ── Account: Change Password ──
+function showChangePassword() {
+  setHeader('🔑 Change Password'); setActive('btn-password'); closeSidebar();
+  showPanel('panel-password');
+  ['pw-current','pw-new','pw-confirm'].forEach(id => document.getElementById(id).value = '');
+  showAlert('pw-alert', null);
+}
+
+async function submitPasswordChange() {
+  const current = document.getElementById('pw-current').value.trim();
+  const nw      = document.getElementById('pw-new').value.trim();
+  const confirm = document.getElementById('pw-confirm').value.trim();
+  if (!current || !nw || !confirm) return;
+  if (nw !== confirm) { showAlert('pw-alert', 'New passwords do not match.', 'error'); return; }
+  if (nw.length < 8)  { showAlert('pw-alert', 'Password must be at least 8 characters.', 'error'); return; }
+
+  const data = await apiPost('/api/me/password', { current_password: current, new_password: nw });
+  if (!data) return;
+  if (data.ok) {
+    showAlert('pw-alert', 'Password updated. Other sessions have been signed out.', 'success');
+    ['pw-current','pw-new','pw-confirm'].forEach(id => document.getElementById(id).value = '');
+  } else {
+    showAlert('pw-alert', data.detail || 'Error updating password.', 'error');
+  }
+}
+
+// ── Account: TOTP ──
+let _totpSecret = '';
+
+async function showTOTP() {
+  setHeader('🔐 Two-Factor Auth'); setActive('btn-totp'); closeSidebar();
+  showPanel('panel-totp');
+  const data = await apiGet('/api/me/totp/status');
+  renderTOTPPanel(data?.enabled || false);
+}
+
+function renderTOTPPanel(enabled) {
+  const box = document.getElementById('totp-content');
+  if (enabled) {
+    box.innerHTML = `
+      <p style="color:#4caf82;font-size:14px;margin-bottom:16px">Two-factor authentication is <strong>enabled</strong>.</p>
+      <div id="totp-alert" class="alert"></div>
+      <p style="font-size:13px;color:#666;margin-bottom:16px">Enter your current password to disable 2FA.</p>
+      <div class="form-group">
+        <label>Current Password</label>
+        <input type="password" id="totp-pw" placeholder="Password">
+      </div>
+      <button class="btn btn-danger" onclick="submitDisableTOTP()">Disable 2FA</button>`;
+  } else {
+    box.innerHTML = `
+      <p style="font-size:13px;color:#666;margin-bottom:20px">Add a second layer of protection to your account.</p>
+      <div id="totp-alert" class="alert"></div>
+      <div id="totp-setup-start">
+        <button class="btn btn-primary" onclick="startTOTPSetup()">Set Up 2FA</button>
+      </div>
+      <div id="totp-setup-area" style="display:none">
+        <p style="font-size:13px;color:#888;margin-bottom:12px">
+          Scan with Google Authenticator, Authy, or any TOTP app.
+        </p>
+        <div id="qr-container"></div>
+        <p style="font-size:13px;color:#555;margin-bottom:16px">
+          Manual key: <span class="secret-key" id="totp-secret-text"></span>
+        </p>
+        <div class="form-group">
+          <label>Verification Code</label>
+          <input type="text" id="totp-code" inputmode="numeric" maxlength="6" placeholder="000000"
+                 style="letter-spacing:.3em;text-align:center;font-size:20px;max-width:200px"
+                 onkeydown="if(event.key==='Enter') submitEnableTOTP()">
+        </div>
+        <button class="btn btn-success" onclick="submitEnableTOTP()">Verify &amp; Enable 2FA</button>
+      </div>`;
+  }
+}
+
+async function startTOTPSetup() {
+  const data = await apiPost('/api/me/totp/setup', {});
+  if (!data) return;
+  _totpSecret = data.secret;
+  document.getElementById('totp-setup-start').style.display = 'none';
+  document.getElementById('totp-setup-area').style.display = 'block';
+  document.getElementById('totp-secret-text').textContent = data.secret;
+  const qrDiv = document.getElementById('qr-container');
+  qrDiv.innerHTML = '';
+  if (window.QRCode) {
+    new QRCode(qrDiv, { text: data.uri, width: 160, height: 160, colorDark: '#000', colorLight: '#fff' });
+  }
+}
+
+async function submitEnableTOTP() {
+  const code = document.getElementById('totp-code').value.trim();
+  if (code.length !== 6) { showAlert('totp-alert', 'Enter a 6-digit code.', 'error'); return; }
+  const data = await apiPost('/api/me/totp/enable', { code });
+  if (!data) return;
+  if (data.ok) { currentUser.totp_enabled = true; renderTOTPPanel(true); showAlert('totp-alert', '2FA enabled.', 'success'); }
+  else { showAlert('totp-alert', data.detail || 'Invalid code.', 'error'); }
+}
+
+async function submitDisableTOTP() {
+  const pw = document.getElementById('totp-pw').value.trim();
+  if (!pw) return;
+  const data = await apiPost('/api/me/totp/disable', { password: pw });
+  if (!data) return;
+  if (data.ok) { currentUser.totp_enabled = false; renderTOTPPanel(false); showAlert('totp-alert', '2FA disabled.', 'success'); }
+  else { showAlert('totp-alert', data.detail || 'Incorrect password.', 'error'); }
+}
+
+// ── Admin: Users ──
+async function showUsers() {
+  setHeader('👥 User Management'); setActive('btn-users'); closeSidebar();
+  showPanel('panel-users');
+  showAlert('users-alert', null);
+  document.getElementById('users-content').textContent = 'Loading…';
+  const data = await apiGet('/api/admin/users');
+  if (!data?.users) { document.getElementById('users-content').textContent = 'Failed to load.'; return; }
+  if (!data.users.length) { document.getElementById('users-content').innerHTML = '<p style="color:#555;font-size:13px">No users found.</p>'; return; }
+
+  document.getElementById('users-content').innerHTML = `
+    <table class="data-table">
+      <thead><tr><th>Username</th><th>Role</th><th>Status</th><th>Created</th><th>Actions</th></tr></thead>
+      <tbody>${data.users.map(u => `
+        <tr>
+          <td>${esc(u.username)}</td>
+          <td>
+            <select class="role-sel" data-u="${esc(u.username)}"
+              style="background:#1a1a1a;border:1px solid #2e2e2e;color:#ccc;border-radius:4px;padding:3px 8px;font-size:12px">
+              <option value="member"${u.role==='member'?' selected':''}>member</option>
+              <option value="admin"${u.role==='admin'?' selected':''}>admin</option>
+            </select>
+          </td>
+          <td><span class="badge badge-${u.deleted?'deleted':'active'}">${u.deleted?'deleted':'active'}</span></td>
+          <td style="font-size:12px;color:#555">${(u.created_at||'').slice(0,10)||'—'}</td>
+          <td style="display:flex;gap:6px;flex-wrap:wrap">
+            <button class="btn btn-primary" style="padding:4px 10px;font-size:12px"
+              onclick="saveRole('${esc(u.username)}')">Save</button>
+            ${u.username !== currentUser.username
+              ? (u.deleted
+                  ? `<button class="btn btn-success" style="padding:4px 10px;font-size:12px" onclick="restoreUser('${esc(u.username)}')">Restore</button>`
+                  : `<button class="btn btn-danger"  style="padding:4px 10px;font-size:12px" onclick="deleteUser('${esc(u.username)}')">Delete</button>`)
+              : ''}
+          </td>
+        </tr>`).join('')}
+      </tbody>
+    </table>`;
+}
+
+function esc(s) { return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+async function saveRole(username) {
+  const sel = document.querySelector(`.role-sel[data-u="${username}"]`);
+  const data = await apiPost(`/api/admin/users/${username}/role`, { role: sel.value });
+  if (!data) return;
+  showAlert('users-alert', data.ok ? `Role updated for ${username}.` : (data.detail||'Error.'), data.ok?'success':'error');
+}
+async function deleteUser(username) {
+  if (!confirm(`Delete '${username}'? They will be locked out immediately.`)) return;
+  const data = await apiPost(`/api/admin/users/${username}/delete`, {});
+  if (!data) return;
+  showAlert('users-alert', data.ok ? `${username} deleted.` : (data.detail||'Error.'), data.ok?'success':'error');
+  if (data.ok) setTimeout(showUsers, 800);
+}
+async function restoreUser(username) {
+  const data = await apiPost(`/api/admin/users/${username}/restore`, {});
+  if (!data) return;
+  showAlert('users-alert', data.ok ? `${username} restored.` : (data.detail||'Error.'), data.ok?'success':'error');
+  if (data.ok) setTimeout(showUsers, 800);
+}
+
+
+// ── Chat helpers ──
+function addMsg(role, text, isError) {
+  const el = document.createElement('div');
+  el.className = isError ? 'msg error' : `msg ${role}`;
+  el.textContent = text;
+  const box = document.getElementById('messages');
+  box.appendChild(el);
+  box.scrollTop = box.scrollHeight;
+}
+function showTyping() {
+  const el = document.createElement('div');
+  el.className = 'typing-dots'; el.id = 'typing';
+  el.innerHTML = '<span></span><span></span><span></span>';
+  const box = document.getElementById('messages');
+  box.appendChild(el); box.scrollTop = box.scrollHeight;
+}
+function hideTyping() { document.getElementById('typing')?.remove(); }
+function setBusy(v) { document.getElementById('send-btn').disabled = v; document.getElementById('input').disabled = v; }
+function autoResize(el) { el.style.height = 'auto'; el.style.height = Math.min(el.scrollHeight, 130) + 'px'; }
+function handleKey(e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); } }
+
+// ── Init ──
+loadCurrentUser();
+</script>
+</body>
+</html>

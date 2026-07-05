@@ -1,0 +1,65 @@
+services:
+
+  # ── AI web UI ─────────────────────────────────────────────
+  ai-web:
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      - ENVIRONMENT=prod
+      - VECTOR_BACKEND=chroma
+    volumes:
+      - ./data/sqlite:/app/data/sqlite
+      - ./data/chroma_db:/app/data/chroma_db
+      - ./data/raw:/app/data/raw
+      - ./data/logs:/app/data/logs
+      - hf-cache:/root/.cache/huggingface
+    expose:
+      - "8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    networks:
+      - internal
+
+  # ── Telegram bot ──────────────────────────────────────────
+  bot:
+    build: .
+    restart: unless-stopped
+    command: ["python", "main.py", "bot"]
+    env_file: .env
+    volumes:
+      - ./data/sqlite:/app/data/sqlite
+      - ./data/chroma_db:/app/data/chroma_db
+      - ./data/raw:/app/data/raw
+      - ./data/logs:/app/data/logs
+      - hf-cache:/root/.cache/huggingface
+    networks:
+      - internal
+    depends_on:
+      ai-web:
+        condition: service_healthy
+
+  # ── Cloudflare Tunnel ─────────────────────────────────────
+  # Token from: Cloudflare Zero Trust → Networks → Tunnels → your tunnel → token
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run
+    environment:
+      - TUNNEL_TOKEN=${CLOUDFLARE_TUNNEL_TOKEN}
+    networks:
+      - internal
+    depends_on:
+      ai-web:
+        condition: service_healthy
+
+networks:
+  internal:
+    driver: bridge
+
+volumes:
+  hf-cache:      # HuggingFace model cache — persists across container rebuilds

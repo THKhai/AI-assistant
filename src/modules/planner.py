@@ -1,7 +1,7 @@
 import json
 from datetime import date, timedelta
 
-from src.core import db
+from src.core import services
 from src.core.llm import get_llm
 from src.core.logger import get_logger
 
@@ -56,7 +56,7 @@ class PlannerSession:
     def _save_turn(self, role: str, content: str):
         self.turn += 1
         self.history.append({"role": role, "content": content})
-        db.save_turn(self.session_id, "planner", self.session_type, self.turn, role, content)
+        services.conversations.save_turn(self.session_id, "planner", self.session_type, self.turn, role, content)
 
     def start(self) -> str:
         log.info(f"session started — type={self.session_type} id={self.session_id}")
@@ -81,7 +81,7 @@ class PlannerSession:
 
     def _start_monthly(self) -> str:
         period = _this_month()
-        existing = db.get_plan("planner", "monthly", period)
+        existing = services.plans.get("planner", "monthly", period)
         if existing:
             content = existing["content"]
             goals = content.get("goals", [])
@@ -102,15 +102,15 @@ class PlannerSession:
     def _start_weekly(self) -> str:
         period = _this_week()
         today = date.today().strftime("%A, %B %d")
-        monthly = db.get_plan("planner", "monthly", _this_month())
+        monthly = services.plans.get("planner", "monthly", _this_month())
         context = ""
         if monthly:
             goals = monthly["content"].get("goals", [])
             if goals:
                 context = "This month's goals:\n" + "\n".join(f"• {g}" for g in goals) + "\n\n"
-        existing = db.get_plan("planner", "weekly", period)
+        existing = services.plans.get("planner", "weekly", period)
         if existing:
-            tasks = db.get_tasks(existing["id"])
+            tasks = services.plans.get_tasks(existing["id"])
             done = sum(1 for t in tasks if t["status"] == "done")
             prompt = (
                 f"*Weekly Check-in — {period}*\n\n"
@@ -130,10 +130,10 @@ class PlannerSession:
     def _start_daily(self) -> str:
         today = _today()
         day_name = date.today().strftime("%A, %B %d")
-        weekly = db.get_plan("planner", "weekly", _this_week())
+        weekly = services.plans.get("planner", "weekly", _this_week())
         context = ""
         if weekly:
-            tasks = db.get_tasks(weekly["id"])
+            tasks = services.plans.get_tasks(weekly["id"])
             pending = [t for t in tasks if t["status"] == "pending"]
             if pending:
                 task_lines = "\n".join(f"• {t['description']}" for t in pending[:5])
@@ -146,9 +146,9 @@ class PlannerSession:
 
     def _start_evening(self) -> str:
         today = _today()
-        daily = db.get_plan("planner", "daily", today)
+        daily = services.plans.get("planner", "daily", today)
         if daily:
-            tasks = db.get_tasks(daily["id"])
+            tasks = services.plans.get_tasks(daily["id"])
             pending = [t for t in tasks if t["status"] == "pending"]
             if pending:
                 task_lines = "\n".join(f"• [{t['id']}] {t['description']}" for t in pending)
@@ -165,24 +165,24 @@ class PlannerSession:
 
 def save_daily_plan(session_id: str, tasks: list[str]) -> int:
     today = _today()
-    plan_id = db.save_plan("planner", "daily", today, {"tasks": tasks})
-    db.save_tasks(plan_id, "planner", tasks, due_date=today)
+    plan_id = services.plans.save("planner", "daily", today, {"tasks": tasks})
+    services.plans.save_tasks(plan_id, "planner", tasks, due_date=today)
     return plan_id
 
 
 def get_week_status() -> str:
-    weekly = db.get_plan("planner", "weekly", _this_week())
-    daily = db.get_plan("planner", "daily", _today())
+    weekly = services.plans.get("planner", "weekly", _this_week())
+    daily = services.plans.get("planner", "daily", _today())
 
     lines = [f"*Status — Week {_this_week()}*\n"]
 
     if weekly:
-        tasks = db.get_tasks(weekly["id"])
+        tasks = services.plans.get_tasks(weekly["id"])
         done = sum(1 for t in tasks if t["status"] == "done")
         lines.append(f"Weekly tasks: {done}/{len(tasks)} done")
 
     if daily:
-        tasks = db.get_tasks(daily["id"])
+        tasks = services.plans.get_tasks(daily["id"])
         done = sum(1 for t in tasks if t["status"] == "done")
         lines.append(f"Today's tasks: {done}/{len(tasks)} done")
         for t in tasks:

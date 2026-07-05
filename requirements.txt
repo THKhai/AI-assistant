@@ -9,5 +9,12 @@ qdrant-client
 sentence-transformers
 python-telegram-bot
 fastapi
-uvicorn
+uvicorn[standard]
+aiofiles
 python-dotenv
+PyJWT
+bcrypt
+python-multipart
+pyotp
+sqlmodel
+cachetools

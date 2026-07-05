@@ -1,6 +1,9 @@
-# Home Assistant — AI Planning Coach
+# AI Assistant — Planning Coach
 
-Personal AI assistant running as a Telegram bot. Acts as a planning coach: monthly → weekly → daily → evening check-in. Built to be extended with new modules (journaling, learning, etc.).
+> **For Claude:** Read `PROJECT.md` for full tech stack, architecture, DB schema, and API reference.
+> Read `RULES.md` for conventions and constraints to follow when editing this project.
+
+Personal AI assistant running as a Telegram bot + web UI. Acts as a planning coach: monthly → weekly → daily → evening check-in. Built to be extended with new modules (journaling, learning, etc.).
 
 ## How to Run
 
@@ -29,12 +32,22 @@ python311 main.py ask "..."  # one-shot RAG query (CLI)
 src/core/        — shared infrastructure, never import modules from here
   config.py      — all env vars and constants
   logger.py      — get_logger(name) → writes to data/logs/app.log + console
-  db.py          — SQLite helpers (init_db, save_plan, get_tasks, etc.)
+  db.py          — engine, session, _to_dict, init_db ONLY (stripped to ~60 lines)
+  models.py      — SQLModel table definitions (8 tables)
+  auth.py        — JWT, bcrypt, TOTP, FastAPI Depends factories
+  migrate.py     — raw sqlite3 migration runner
   llm.py         — DeepSeek client singleton via OpenAILike
   embedder.py    — HuggingFace embedding singleton
   vector_store.py — ChromaDB/Qdrant adapter (only file that changes per backend)
   ingest.py      — JSON file → chunks → vector store (dedup by file hash)
   query.py       — RAG: retrieve top-k chunks → LLM answer
+
+  services/      — domain service layer (OOP, stateless singletons + DI factories)
+    __init__.py  — singleton instances + get_*_service() FastAPI Depends factories
+    user_service.py      — UserService (user CRUD + TTL cache)
+    token_service.py     — TokenService (revocation + refresh) + TotpService
+    plan_service.py      — PlanService + ConversationService
+    knowledge_service.py — KnowledgeService
 
 src/bot/         — Telegram interface
   handler.py     — async command/message handlers
@@ -44,11 +57,17 @@ src/bot/         — Telegram interface
 src/modules/     — one file per use case
   planner.py     — planning coach (monthly/weekly/daily/evening sessions)
 
+src/web/
+  app.py         — FastAPI app: routes use Depends(get_*_service) for DI
+  static/
+    index.html   — single-page UI (vanilla JS, dark theme)
+
 data/
   raw/           — JSON knowledge files (NOT git-tracked)
   chroma_db/     — ChromaDB persistence (NOT git-tracked)
   sqlite/app.db  — all plans, tasks, conversations (NOT git-tracked)
   logs/app.log   — rotating log file (NOT git-tracked)
+  migrations/    — NNN_description.sql migration files
 ```
 
 ## Key Conventions
@@ -57,7 +76,13 @@ data/
 1. Create `src/modules/journal.py`
 2. Add handler functions in `src/bot/handler.py`
 3. Register commands in `src/bot/router.py`
-4. No changes to `src/core/`
+4. Add API routes in `src/web/app.py` — inject services via `Depends(get_*_service)`
+5. If new DB tables: add model to `src/core/models.py` + new service file in `src/core/services/`
+6. Do NOT add domain functions to `db.py` — they belong in a service class
+
+**Service layer** — all domain logic is in `src/core/services/`:
+- Route handlers: `users: UserService = Depends(get_user_service)`
+- Elsewhere (auth.py, planner.py): `from src.core import services` → `services.users.get(...)`
 
 **SQLite tables** must always have these columns:
 ```sql

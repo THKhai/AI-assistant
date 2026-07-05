@@ -27,3 +27,19 @@ CHUNK_SIZE = 512
 CHUNK_OVERLAP = 64
 RETRIEVAL_TOP_K = 5
 CONVERSATION_HISTORY_TURNS = 5
+
+JWT_SECRET = os.getenv("JWT_SECRET", "")
+JWT_EXPIRY_HOURS = int(os.getenv("JWT_EXPIRY_HOURS", "24"))
+
+LOGIN_MAX_ATTEMPTS = int(os.getenv("LOGIN_MAX_ATTEMPTS", "5"))
+LOGIN_LOCKOUT_MINUTES = int(os.getenv("LOGIN_LOCKOUT_MINUTES", "15"))
+
+REFRESH_TOKEN_EXPIRY_DAYS = int(os.getenv("REFRESH_TOKEN_EXPIRY_DAYS", "30"))
+TOTP_ISSUER = os.getenv("TOTP_ISSUER", "AI Assistant")
+
+# "dev" = HTTP localhost, "prod" = HTTPS behind Cloudflare Tunnel
+ENVIRONMENT = os.getenv("ENVIRONMENT", "dev")
+
+# Optional: paths to TLS cert/key for local HTTPS (leave blank to use HTTP)
+HTTPS_CERT_FILE = os.getenv("HTTPS_CERT_FILE", "")
+HTTPS_KEY_FILE = os.getenv("HTTPS_KEY_FILE", "")

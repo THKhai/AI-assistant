@@ -1,0 +1,27 @@
+# Runtime data — mounted as volumes, not baked into the image
+data/sqlite/
+data/chroma_db/
+data/raw/
+data/logs/
+
+# Secrets
+.env
+certs/
+
+# Dev/editor noise
+.venv/
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+.pytest_cache/
+.git/
+.gitignore
+.idea/
+
+# Docs (not needed at runtime)
+claude/
+README.md
+PROJECT.md
+RULES.md
