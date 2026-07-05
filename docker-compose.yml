@@ -44,12 +44,16 @@ services:
         condition: service_healthy
 
   # ── Cloudflare Tunnel ─────────────────────────────────────
-  # Token from: Cloudflare Zero Trust → Networks → Tunnels → your tunnel → Overview tab
-  # Add CLOUDFLARE_TUNNEL_TOKEN=<token> to .env to activate this service.
+  # Quick tunnel (random *.trycloudflare.com URL, no domain/token needed):
+  #   docker compose --profile tunnel up -d cloudflared
+  #   docker compose logs cloudflared   ← URL appears here
+  #
+  # Named tunnel (persistent domain, requires CLOUDFLARE_TUNNEL_TOKEN in .env):
+  #   Change command below to: tunnel --no-autoupdate run --token ${CLOUDFLARE_TUNNEL_TOKEN:-}
   cloudflared:
     image: cloudflare/cloudflared:latest
     restart: unless-stopped
-    command: tunnel --no-autoupdate run --token ${CLOUDFLARE_TUNNEL_TOKEN:-}
+    command: tunnel --no-autoupdate --url http://ai-web:8000
     networks:
       - internal
     depends_on:
