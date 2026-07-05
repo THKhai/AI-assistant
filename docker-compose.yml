@@ -43,22 +43,6 @@ services:
       ai-web:
         condition: service_healthy
 
-  # ── SQLite Web (DB browser) ───────────────────────────────
-  # Read-only browser for app.db. Start with: docker compose --profile tools up -d sqlite-web
-  # Access at: http://<server-local-ip>:8080
-  sqlite-web:
-    image: coleifer/sqlite-web
-    restart: unless-stopped
-    command: ["-H", "0.0.0.0", "-p", "8080", "-x", "/data/app.db"]
-    volumes:
-      - ./data/sqlite:/data:ro
-    ports:
-      - "8080:8080"
-    networks:
-      - internal
-    profiles:
-      - tools
-
   # ── Cloudflare Tunnel ─────────────────────────────────────
   # Quick tunnel (random *.trycloudflare.com URL, no domain/token needed):
   #   docker compose --profile tunnel up -d cloudflared
