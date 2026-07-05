@@ -15,7 +15,8 @@ from pathlib import Path
 # Make sure src/ is importable when run from project root
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from src.core.db import init_db, create_user, get_user
+from src.core.db import init_db
+from src.core import services
 from src.core.auth import hash_password
 
 _VALID_ROLES = {"admin", "member"}
@@ -30,12 +31,12 @@ def main():
 
     init_db()
 
-    if get_user(args.username):
+    if services.users.get(args.username):
         print(f"Error: username '{args.username}' already exists.")
         sys.exit(1)
 
     pw_hash = hash_password(args.password)
-    user_id = create_user(args.username, pw_hash, role=args.role)
+    user_id = services.users.create(args.username, pw_hash, role=args.role)
     print(f"Created user '{args.username}' role={args.role} (id={user_id})")
 
 
