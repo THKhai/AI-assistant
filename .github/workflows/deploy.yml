@@ -1,0 +1,35 @@
+name: Deploy
+
+on:
+  push:
+    branches: [master]
+
+jobs:
+  deploy:
+    runs-on: self-hosted
+    timeout-minutes: 10
+
+    steps:
+      - name: Pull latest code
+        working-directory: ${{ vars.DEPLOY_DIR }}
+        run: git pull origin master
+
+      - name: Rebuild and restart containers
+        working-directory: ${{ vars.DEPLOY_DIR }}
+        run: docker compose up -d --build --remove-orphans
+
+      - name: Health check
+        run: |
+          echo "Waiting for service..."
+          for i in $(seq 1 12); do
+            if curl -sf http://localhost:8000/health; then
+              echo ""
+              echo "Service is healthy"
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "Health check failed after 60s"
+          docker compose logs --tail=50
+          exit 1
+        working-directory: ${{ vars.DEPLOY_DIR }}
