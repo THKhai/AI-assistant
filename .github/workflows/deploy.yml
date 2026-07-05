@@ -10,26 +10,34 @@ jobs:
     timeout-minutes: 10
 
     steps:
-      - name: Pull latest code
-        working-directory: ${{ vars.DEPLOY_DIR }}
-        run: git pull origin master
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          clean: false   # preserve .env and data/ (gitignored, must stay between runs)
+
+      - name: Verify .env exists
+        run: |
+          if [ ! -f .env ]; then
+            echo "ERROR: .env not found in workspace."
+            echo "Place it at: $(pwd)/.env"
+            echo "Copy from: .env.example and fill in secrets."
+            exit 1
+          fi
 
       - name: Rebuild and restart containers
-        working-directory: ${{ vars.DEPLOY_DIR }}
         run: docker compose up -d --build --remove-orphans
 
       - name: Health check
         run: |
-          echo "Waiting for service..."
+          echo "Waiting for service to be healthy..."
           for i in $(seq 1 12); do
             if curl -sf http://localhost:8000/health; then
               echo ""
-              echo "Service is healthy"
+              echo "Healthy after $((i * 5))s"
               exit 0
             fi
             sleep 5
           done
-          echo "Health check failed after 60s"
+          echo "Health check failed after 60s — last 50 log lines:"
           docker compose logs --tail=50
           exit 1
-        working-directory: ${{ vars.DEPLOY_DIR }}
